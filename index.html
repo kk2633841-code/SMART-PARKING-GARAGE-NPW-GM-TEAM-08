@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ลานจอดรถอัจฉริยะ (3 อาคาร)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-main: #111622;
+      --bg-header: #1d2330;
+      --bg-card: #1d2534;
+      --bg-slot: #232d40;
+      --bg-slot-occupied: rgba(239, 68, 68, 0.16);
+      --border-card: #2d374a;
+      --border-slot: #586780;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.14);
+      --blue: #1d56d8;
+      --blue-hover: #2563eb;
+      --sensor-bg: #1e40af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Prompt', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .topbar {
+      background-color: var(--bg-header);
+      border-bottom: 1px solid var(--border-card);
+      padding: 16px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .topbar h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .btn-back {
+      position: absolute;
+      left: 0;
+      background: #283246;
+      color: var(--text-primary);
+      border: 1px solid var(--border-card);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn-back:hover {
+      background: #334058;
+    }
+
+    .db-status {
+      position: absolute;
+      right: 0;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: #141a26;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-card);
+    }
+
+    @media (max-width: 640px) {
+      .db-status { display: none; }
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 18px 14px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .summary-label {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    .summary-value {
+      font-size: 2.3rem;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+
+    .summary-value.red { color: var(--red); }
+    .summary-value.green { color: var(--green); }
+
+    .summary-sub {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e2e8f0;
+    }
+
+    .buildings-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 820px) {
+      .buildings-list { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .building-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.15s ease, border-color 0.2s;
+    }
+
+    .building-card:hover { border-color: #3f4e68; }
+
+    .building-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .building-name {
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-badge {
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .badge-high { color: var(--green); background: var(--green-bg); border: 1px solid rgba(34, 197, 94, 0.5); }
+    .badge-mid { color: var(--amber); background: var(--amber-bg); border: 1px solid rgba(245, 158, 11, 0.5); }
+    .badge-full { color: var(--red); background: var(--red-bg); border: 1px solid rgba(239, 68, 68, 0.5); }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: #121824;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--red);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .building-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.92rem;
+      color: #cbd5e1;
+    }
+
+    .building-stats .num-red { color: var(--red); font-weight: 600; }
+    .building-stats .num-green { color: var(--green); font-weight: 600; }
+
+    .btn-enter {
+      width: 100%;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-enter:hover { background: var(--blue-hover); }
+
+    .hidden { display: none !important; }
+
+    .detail-hint {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      margin-bottom: 16px;
+    }
+
+    .detail-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+
+    .toolbar-info { font-size: 0.9rem; color: var(--text-secondary); }
+    .toolbar-actions { display: flex; gap: 8px; }
+
+    .btn-small {
+      background: #283347;
+      color: #e2e8f0;
+      border: 1px solid #394863;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-small:hover { background: #33415a; }
+    .btn-small.danger { color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
+
+    .zone-block { margin-bottom: 26px; }
+
+    .row-label {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      padding-left: 4px;
+    }
+
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px 12px;
+      padding: 0 6px;
+    }
+
+    @media (min-width: 640px) {
+      .slots-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 16px 14px;
+      }
+    }
+
+    .slot-card {
+      position: relative;
+      background: var(--bg-slot);
+      border: 2px dashed var(--border-slot);
+      border-radius: 14px;
+      min-height: 112px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transform: skewX(-9deg);
+      transition: transform 0.15s ease, background-color 0.2s, border-color 0.2s;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .slot-card:hover {
+      border-color: #7c8ea8;
+      transform: skewX(-9deg) translateY(-2px);
+    }
+
+    .slot-card.occupied {
+      background: var(--bg-slot-occupied);
+      border-color: var(--red);
+      border-style: solid;
+    }
+
+    .slot-content {
+      transform: skewX(9deg);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 6px;
+    }
+
+    .slot-icon {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--green);
+      line-height: 1;
+    }
+
+    .slot-card.occupied .slot-icon { color: var(--red); }
+
+    .slot-code {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    .slot-status-text {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    .slot-card.occupied .slot-status-text { color: #fca5a5; }
+
+    .sensor-badge {
+      font-size: 0.68rem;
+      background: rgba(37, 99, 235, 0.35);
+      color: #93c5fd;
+      padding: 2px 7px;
+      border-radius: 5px;
+      margin-top: 2px;
+    }
+
+    .lane-divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 18px 0;
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+    }
+
+    .lane-divider::before,
+    .lane-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #2f3b52;
+    }
+
+    .detail-bottom-summary { margin-top: 28px; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <button id="backBtn" class="btn-back hidden" onclick="goHome()">← กลับ</button>
+      <h1 id="pageTitle">ลานจอดรถอัจฉริยะ (3 อาคาร)</h1>
+      <div id="dbStatus" class="db-status">🟡 กำลังเชื่อมต่อ...</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- VIEW 1: OVERVIEW -->
+    <section id="overviewView">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">รถจอดอยู่ทั้งหมด (3 โรง)</div>
+          <div id="totalOccupied" class="summary-value red">0</div>
+          <div id="totalCapacityText" class="summary-sub">จากทั้งหมด 210 คัน</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">ช่องว่างทั้งหมด (3 โรง)</div>
+          <div id="totalAvailable" class="summary-value green">210</div>
+          <div class="summary-sub">ช่อง</div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span>🏢</span>
+        <span>เลือกโรงจอดรถที่ต้องการดูรายละเอียด (รวม 210 คัน)</span>
+      </div>
+
+      <div id="buildingsList" class="buildings-list"></div>
+    </section>
+
+    <!-- VIEW 2: BUILDING DETAIL -->
+    <section id="detailView" class="hidden">
+      <div class="detail-hint">👆 ช่องที่มีป้าย Sensor รับค่าอัตโนมัติจาก ESP32 • ช่องอื่นแตะเพื่อจำลองรถเข้า/ออก</div>
+
+      <div class="detail-toolbar">
+        <div id="detailBuildingInfo" class="toolbar-info">โรงจอดรถที่ 1 • ความจุ 144 คัน</div>
+        <div class="toolbar-actions">
+          <button class="btn-small" onclick="simulateRandom()">สุ่มรถเข้าจอด</button>
+          <button class="btn-small danger" onclick="clearBuilding()">ล้างช่องจอดทั้งหมด</button>
+        </div>
+      </div>
+
+      <div id="zonesContainer"></div>
+
+      <div class="summary-grid detail-bottom-summary">
+        <div class="summary-card">
+          <div class="summary-label">จำนวนรถ</div>
+          <div id="detailOccupied" class="summary-value red">0</div>
+          <div class="summary-sub">คัน</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">ช่องที่ว่าง</div>
+          <div id="detailAvailable" class="summary-value green">0</div>
+          <div class="summary-sub">ช่อง</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Script เชื่อม Firebase และจัดการหน้าเว็บ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-database.js";
+
+    // 🔴 ใส่ค่า Config ของ Firebase คุณตรงนี้
+    const firebaseConfig = {
+      apiKey: "AIzaSy...",
+      authDomain: "your-project.firebaseapp.com",
+      databaseURL: "https://your-project-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "your-project",
+      storageBucket: "your-project.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdef"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // กำหนดจับคู่เซ็นเซอร์ ESP32 กับช่องจอดจริง
+    const SENSOR_MAPPING = {
+      slot_1: { buildingId: 1, code: "A-01", label: "Sensor 1" },
+      slot_2: { buildingId: 1, code: "A-03", label: "Sensor 2" },
+      slot_3: { buildingId: 1, code: "B-01", label: "Sensor 3" }
+    };
+
+    const BUILDING_CONFIG = [
+      {
+        id: 1,
+        name: "โรงจอดรถที่ 1",
+        capacity: 144,
+        zones: [
+          { rows: [{ label: "A", count: 12 }, { label: "B", count: 12 }] },
+          { rows: [{ label: "C", count: 12 }, { label: "D", count: 12 }] },
+          { rows: [{ label: "E", count: 12 }, { label: "F", count: 12 }] },
+          { rows: [{ label: "G", count: 12 }, { label: "H", count: 12 }] },
+          { rows: [{ label: "I", count: 12 }, { label: "J", count: 12 }] },
+          { rows: [{ label: "K", count: 12 }, { label: "L", count: 12 }] }
+        ]
+      },
+      {
+        id: 2,
+        name: "โรงจอดรถที่ 2",
+        capacity: 38,
+        zones: [
+          { rows: [{ label: "A", count: 10 }, { label: "B", count: 10 }] },
+          { rows: [{ label: "C", count: 9 }, { label: "D", count: 9 }] }
+        ]
+      },
+      {
+        id: 3,
+        name: "โรงจอดรถที่ 3",
+        capacity: 28,
+        zones: [
+          { rows: [{ label: "A", count: 7 }, { label: "B", count: 7 }] },
+          { rows: [{ label: "C", count: 7 }, { label: "D", count: 7 }] }
+        ]
+      }
+    ];
+
+    const STORAGE_KEY = "smart_parking_state_v1_144_38_28";
+    let currentBuildingId = null;
+    let parkingState = loadState();
+    let sensorDistances = {};
+
+    // ดึงข้อมูล Real-time จาก Firebase
+    const parkingRef = ref(db, "parking_slots");
+    onValue(parkingRef, (snapshot) => {
+      document.getElementById("dbStatus").textContent = "🟢 เชื่อมต่อ Firebase แล้ว";
+      const data = snapshot.val();
+
+      if (data) {
+        Object.keys(SENSOR_MAPPING).forEach((sensorKey) => {
+          const mapInfo = SENSOR_MAPPING[sensorKey];
+          const sensorData = data[sensorKey];
+
+          if (sensorData) {
+            const isOccupied = sensorData.status === "occupied";
+            parkingState[mapInfo.buildingId][mapInfo.code] = isOccupied;
+            sensorDistances[`${mapInfo.buildingId}-${mapInfo.code}`] = sensorData.distance_cm;
+          }
+        });
+
+        saveState();
+
+        if (currentBuildingId === null) {
+          renderOverview();
+        } else {
+          renderDetail();
+        }
+      }
+    }, (error) => {
+      document.getElementById("dbStatus").textContent = "🔴 เชื่อมต่อ Firebase ไม่สำเร็จ";
+    });
+
+    function createInitialState() {
+      const state = {};
+      BUILDING_CONFIG.forEach((b) => {
+        state[b.id] = {};
+        b.zones.forEach((z) => {
+          z.rows.forEach((r) => {
+            for (let i = 1; i <= r.count; i++) {
+              const code = `${r.label}-${String(i).padStart(2, "0")}`;
+              state[b.id][code] = false;
+            }
+          });
+        });
+      });
+      return state;
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return createInitialState();
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parkingState));
+      } catch (e) {}
+    }
+
+    function getMappedSensor(buildingId, code) {
+      return Object.values(SENSOR_MAPPING).find(
+        (m) => m.buildingId === buildingId && m.code === code
+      );
+    }
+
+    function getBuildingStats(buildingId) {
+      const slots = parkingState[buildingId];
+      const keys = Object.keys(slots);
+      const total = keys.length;
+      const occupied = keys.filter((k) => slots[k]).length;
+      const available = total - occupied;
+      return { total, occupied, available };
+    }
+
+    function getStatusBadge(available, total) {
+      const ratio = available / total;
+      if (available === 0) return { text: "เต็มแล้ว", className: "badge-full" };
+      if (ratio <= 0.3) return { text: "ใกล้เต็ม", className: "badge-mid" };
+      return { text: "ว่างเยอะ", className: "badge-high" };
+    }
+
+    function renderOverview() {
+      let allOccupied = 0;
+      let allCapacity = 0;
+
+      const listEl = document.getElementById("buildingsList");
+      listEl.innerHTML = "";
+
+      BUILDING_CONFIG.forEach((b) => {
+        const stats = getBuildingStats(b.id);
+        allOccupied += stats.occupied;
+        allCapacity += stats.total;
+
+        const badge = getStatusBadge(stats.available, stats.total);
+        const percent = Math.round((stats.occupied / stats.total) * 100);
+
+        const card = document.createElement("div");
+        card.className = "building-card";
+        card.innerHTML = `
+          <div class="building-header">
+            <div class="building-name">🏢 ${b.name}</div>
+            <span class="status-badge ${badge.className}">${badge.text}</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width: ${percent}%"></div>
+          </div>
+          <div class="building-stats">
+            <span>จอดแล้ว: <span class="num-red">${stats.occupied}</span> คัน</span>
+            <span>ว่าง: <span class="num-green">${stats.available}</span> / ${stats.total}</span>
+          </div>
+          <button class="btn-enter" onclick="openBuilding(${b.id})">
+            กดเพื่อเข้าดูช่องจอด →
+          </button>
+        `;
+        listEl.appendChild(card);
+      });
+
+      document.getElementById("totalOccupied").textContent = allOccupied;
+      document.getElementById("totalAvailable").textContent = allCapacity - allOccupied;
+      document.getElementById("totalCapacityText").textContent = `จากทั้งหมด ${allCapacity} คัน`;
+    }
+
+    function openBuilding(buildingId) {
+      currentBuildingId = buildingId;
+      const building = BUILDING_CONFIG.find((b) => b.id === buildingId);
+
+      document.getElementById("overviewView").classList.add("hidden");
+      document.getElementById("detailView").classList.remove("hidden");
+      document.getElementById("backBtn").classList.remove("hidden");
+      document.getElementById("pageTitle").textContent = `ลานจอดรถอัจฉริยะ - ${building.name}`;
+      document.getElementById("detailBuildingInfo").textContent = `${building.name} • ความจุทั้งหมด ${building.capacity} คัน`;
+
+      renderDetail();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function goHome() {
+      currentBuildingId = null;
+      document.getElementById("detailView").classList.add("hidden");
+      document.getElementById("overviewView").classList.remove("hidden");
+      document.getElementById("backBtn").classList.add("hidden");
+      document.getElementById("pageTitle").textContent = "ลานจอดรถอัจฉริยะ (3 อาคาร)";
+
+      renderOverview();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderDetail() {
+      const building = BUILDING_CONFIG.find((b) => b.id === currentBuildingId);
+      const container = document.getElementById("zonesContainer");
+      container.innerHTML = "";
+
+      building.zones.forEach((zone, zIndex) => {
+        const zoneDiv = document.createElement("div");
+        zoneDiv.className = "zone-block";
+
+        zone.rows.forEach((row, rIndex) => {
+          const rowLabel = document.createElement("div");
+          rowLabel.className = "row-label";
+          rowLabel.textContent = `โซน ${zIndex + 1} • แถว ${row.label} (${row.count} ช่อง)`;
+          zoneDiv.appendChild(rowLabel);
+
+          const grid = document.createElement("div");
+          grid.className = "slots-grid";
+
+          for (let i = 1; i <= row.count; i++) {
+            const code = `${row.label}-${String(i).padStart(2, "0")}`;
+            const isOccupied = parkingState[currentBuildingId][code];
+            const mappedSensor = getMappedSensor(currentBuildingId, code);
+
+            let sensorTag = "";
+            if (mappedSensor) {
+              const dist = sensorDistances[`${currentBuildingId}-${code}`];
+              const distText = dist !== undefined && dist !== 999 ? ` (${dist}cm)` : "";
+              sensorTag = `<span class="sensor-badge">${mappedSensor.label}${distText}</span>`;
+            }
+
+            const slot = document.createElement("div");
+            slot.className = `slot-card ${isOccupied ? "occupied" : ""}`;
+            slot.onclick = () => toggleSlot(code);
+            slot.innerHTML = `
+              <div class="slot-content">
+                <div class="slot-icon">${isOccupied ? "🚗" : "P"}</div>
+                <div class="slot-code">${code}</div>
+                <div class="slot-status-text">${isOccupied ? "ไม่ว่าง" : "ว่าง"}</div>
+                ${sensorTag}
+              </div>
+            `;
+            grid.appendChild(slot);
+          }
+
+          zoneDiv.appendChild(grid);
+
+          if (rIndex === 0 && zone.rows.length > 1) {
+            const lane = document.createElement("div");
+            lane.className = "lane-divider";
+            lane.textContent = "▲ ช่องทางเดินรถ ▼";
+            zoneDiv.appendChild(lane);
+          }
+        });
+
+        container.appendChild(zoneDiv);
+      });
+
+      updateDetailStats();
+    }
+
+    function updateDetailStats() {
+      const stats = getBuildingStats(currentBuildingId);
+      document.getElementById("detailOccupied").textContent = stats.occupied;
+      document.getElementById("detailAvailable").textContent = stats.available;
+    }
+
+    function toggleSlot(code) {
+      parkingState[currentBuildingId][code] = !parkingState[currentBuildingId][code];
+      saveState();
+      renderDetail();
+    }
+
+    function simulateRandom() {
+      const slots = parkingState[currentBuildingId];
+      Object.keys(slots).forEach((code) => {
+        if (!getMappedSensor(currentBuildingId, code)) {
+          slots[code] = Math.random() < 0.45;
+        }
+      });
+      saveState();
+      renderDetail();
+    }
+
+    function clearBuilding() {
+      const slots = parkingState[currentBuildingId];
+      Object.keys(slots).forEach((code) => {
+        if (!getMappedSensor(currentBuildingId, code)) {
+          slots[code] = false;
+        }
+      });
+      saveState();
+      renderDetail();
+    }
+
+    // ผูกฟังก์ชันให้เรียกใช้จากปุ่ม HTML ได้
+    window.openBuilding = openBuilding;
+    window.goHome = goHome;
+    window.simulateRandom = simulateRandom;
+    window.clearBuilding = clearBuilding;
+
+    renderOverview();
+  </script>
+</body>
+</html>
